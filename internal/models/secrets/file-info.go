@@ -2,14 +2,14 @@ package secrets
 
 import "github.com/google/uuid"
 
-type FilePart struct {
+type FileInfo struct {
 	ID          uuid.UUID `json:"id"`
 	Name        string    `json:"name"`
-	Data        []byte    `json:"data"`
+	Size        int64     `json:"size"`
 	Description string    `json:"description,omitempty"`
 }
 
-func (f FilePart) ConvertToSecret() (*Secret, error) {
+func (f FileInfo) ConvertToSecret() (*Secret, error) {
 	s := &Secret{
 		ID:   f.ID,
 		Kind: SecretKindFilePart,

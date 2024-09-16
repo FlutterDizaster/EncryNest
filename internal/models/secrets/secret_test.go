@@ -48,11 +48,11 @@ func Test_parseToExactType(t *testing.T) {
 			},
 		},
 		{
-			name: "FilePart",
-			want: FilePart{
+			name: "FileInfo",
+			want: FileInfo{
 				ID:          uuid.New(),
 				Name:        "name",
-				Data:        []byte("data"),
+				Size:        12345,
 				Description: "some description",
 			},
 		},
@@ -97,12 +97,12 @@ func Test_parseToExactType(t *testing.T) {
 
 				assert.Equal(t, s, got)
 
-			case FilePart:
+			case FileInfo:
 				err := encoder.Encode(s)
 
 				require.NoError(t, err, "encoder.Encode() error = %v", err)
 
-				got, err := parseToExactType[FilePart](buf.Bytes())
+				got, err := parseToExactType[FileInfo](buf.Bytes())
 
 				require.NoError(t, err, "parseToExactType() error = %v", err)
 

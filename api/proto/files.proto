@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "api/generated";
+
+import "google/protobuf/empty.proto";
+
+message FileData {
+    string filename = 1;
+    string content = 2;
+}
+
+message DownloadFileRequest {
+    string id = 1;
+}
+
+service EncryNestFileService {
+    rpc UploadFile(stream FileData) returns (google.protobuf.Empty);
+    rpc DownloadFile(DownloadFileRequest) returns (stream FileData);
+}

@@ -46,7 +46,7 @@ func (s *Secret) ParseToExactType() (interface{}, error) {
 		return parseToExactType[Memo](s.Data)
 
 	case SecretKindFilePart:
-		return parseToExactType[FilePart](s.Data)
+		return parseToExactType[FileInfo](s.Data)
 
 	default:
 		return nil, ErrWrongType
