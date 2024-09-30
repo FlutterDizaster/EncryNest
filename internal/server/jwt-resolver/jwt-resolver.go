@@ -55,7 +55,8 @@ func (res *JWTResolver) CreateToken(issuer, subject string, userID uuid.UUID) (s
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(res.tokenTTL)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
-		UserID: userID,
+		UserID:  userID,
+		ClentID: uuid.New(),
 	}
 
 	// Создание токена
