@@ -8,7 +8,7 @@ import "google/protobuf/empty.proto";
 
 message FileData {
     string filename = 1;
-    string content = 2;
+    bytes content = 2;
 }
 
 message DownloadFileRequest {

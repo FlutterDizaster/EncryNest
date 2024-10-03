@@ -1,9 +1,10 @@
-package secretservice
+package secretsservice
 
 import (
 	"context"
 
 	pb "github.com/FlutterDizaster/EncryNest/api/generated"
+	ctxvalues "github.com/FlutterDizaster/EncryNest/internal/models/ctx-values"
 	"github.com/FlutterDizaster/EncryNest/internal/models/secrets"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
@@ -22,8 +23,8 @@ type SecretsController interface {
 	// Return channel of secret updates.
 	SubscribeUpdates(
 		ctx context.Context,
-		owner uuid.UUID,
-		client uuid.UUID,
+		userID uuid.UUID,
+		clientID uuid.UUID,
 		knownVersion string,
 		knownIDs []string,
 	) <-chan secrets.Update
@@ -60,17 +61,15 @@ func (s *SecretsService) MakeUpdate(
 	}
 
 	// Obtaining user id from ctx
-	rawUserID := ctx.Value("userID")
-	userID, err := uuid.Parse(rawUserID.(string))
-	if err != nil {
-		return nil, status.Errorf(codes.Unauthenticated, "invalid user ID")
+	userID, ok := ctx.Value(ctxvalues.ContextUserID).(uuid.UUID)
+	if !ok {
+		return nil, status.Errorf(codes.Internal, "can't get user ID")
 	}
 
 	// Obtaining client id from ctx
-	rawClientID := ctx.Value("clientID")
-	clientID, err := uuid.Parse(rawClientID.(string))
-	if err != nil {
-		return nil, status.Errorf(codes.Unauthenticated, "invalid client ID")
+	clientID, ok := ctx.Value(ctxvalues.ContextClientID).(uuid.UUID)
+	if !ok {
+		return nil, status.Errorf(codes.Internal, "can't get client ID")
 	}
 
 	upd := &secrets.Update{
@@ -100,23 +99,21 @@ func (s *SecretsService) SubscribeUpdates(
 	req *pb.SubscribeRequest,
 	stream grpc.ServerStreamingServer[pb.Update],
 ) error {
-	// Obtaining owner id from ctx
-	rawOwnerID := stream.Context().Value("userID")
-	ownerID, err := uuid.Parse(rawOwnerID.(string))
-	if err != nil {
-		return status.Errorf(codes.Unauthenticated, "invalid user ID")
+	// Obtaining user id from ctx
+	userID, ok := stream.Context().Value(ctxvalues.ContextUserID).(uuid.UUID)
+	if !ok {
+		return status.Errorf(codes.Internal, "can't get user ID")
 	}
 
 	// Obtaining client id from ctx
-	rawClientID := stream.Context().Value("clientID")
-	clientID, err := uuid.Parse(rawClientID.(string))
-	if err != nil {
-		return status.Errorf(codes.Unauthenticated, "invalid client ID")
+	clientID, ok := stream.Context().Value(ctxvalues.ContextClientID).(uuid.UUID)
+	if !ok {
+		return status.Errorf(codes.Internal, "can't get client ID")
 	}
 
 	updatesChan := s.secretsController.SubscribeUpdates(
 		stream.Context(),
-		ownerID,
+		userID,
 		clientID,
 		req.GetKnownVersion(),
 		req.GetKnownIds(),
@@ -141,7 +138,7 @@ func (s *SecretsService) SubscribeUpdates(
 			// TODO: Add default case
 		}
 
-		err = stream.Send(&resp)
+		err := stream.Send(&resp)
 		if err != nil {
 			return status.Errorf(codes.Internal, "failed to send update: %v", err)
 		}

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/FlutterDizaster/EncryNest/internal/models/secrets"
-	secretscontroller "github.com/FlutterDizaster/EncryNest/internal/server/controllers/secrets-controller"
 	"github.com/google/uuid"
 )
 
@@ -14,7 +13,13 @@ type SecretsRepo struct {
 	userSecrets sync.Map
 }
 
-var _ secretscontroller.SecretsRepository = (*SecretsRepo)(nil)
+func NewInMemoryRepository() *SecretsRepo {
+	return &SecretsRepo{
+		userSecrets: sync.Map{},
+	}
+}
+
+// var _ secretscontroller.SecretsRepository = (*SecretsRepo)(nil)
 
 func (r *SecretsRepo) AddSecret(
 	_ context.Context,

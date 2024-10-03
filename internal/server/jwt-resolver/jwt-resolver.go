@@ -55,8 +55,12 @@ func (res *JWTResolver) CreateToken(issuer, subject string, userID uuid.UUID) (s
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(res.tokenTTL)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
-		UserID:  userID,
-		ClentID: uuid.New(),
+		UserID: userID,
+
+		// FIXME: temporary solution.
+		// In future it should be best way to get client ID from DB for registered clients.
+		// Or store it on client side and send it with auth request.
+		ClientID: uuid.New(),
 	}
 
 	// Создание токена

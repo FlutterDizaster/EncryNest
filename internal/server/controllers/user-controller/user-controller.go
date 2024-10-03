@@ -25,6 +25,16 @@ type UserController struct {
 	jwtResolver *jwtresolver.JWTResolver
 }
 
+func NewUserController(
+	userRepo UserRepository,
+	jwtResolver *jwtresolver.JWTResolver,
+) *UserController {
+	return &UserController{
+		userRepo:    userRepo,
+		jwtResolver: jwtResolver,
+	}
+}
+
 // var _ userservice.UserController = (*UserController)(nil)
 
 // RegisterUser registers new user in the system and returns JWT token string.

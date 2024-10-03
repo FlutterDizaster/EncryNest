@@ -7,6 +7,7 @@ import (
 	pb "github.com/FlutterDizaster/EncryNest/api/generated"
 	"github.com/FlutterDizaster/EncryNest/internal/models"
 	sharederrors "github.com/FlutterDizaster/EncryNest/internal/shared-errors"
+	"github.com/FlutterDizaster/EncryNest/pkg/validator"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -43,10 +44,29 @@ func (s *UserService) RegisterUser(
 	ctx context.Context,
 	req *pb.RegisterUserRequest,
 ) (*pb.RegisterUserResponse, error) {
+	username := req.GetUsername()
+	email := req.GetEmail()
+	password := req.GetPassword()
+
+	err := validator.ValidateUsername(username)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	err = validator.ValidateEmail(email)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	err = validator.ValidatePassword(password)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+
 	user := &models.UserCredentials{
-		Username:     req.GetUsername(),
-		Email:        req.GetEmail(),
-		PasswordHash: req.GetPassword(),
+		Username:     username,
+		Email:        email,
+		PasswordHash: password,
 	}
 
 	token, err := s.userController.RegisterUser(ctx, user)
