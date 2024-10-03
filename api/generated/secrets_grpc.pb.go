@@ -28,7 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type EncryNestSecretsServiceClient interface {
 	SubscribeUpdates(ctx context.Context, in *SubscribeRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Update], error)
-	MakeUpdate(ctx context.Context, in *Update, opts ...grpc.CallOption) (*MakeUpdateRequest, error)
+	MakeUpdate(ctx context.Context, in *Update, opts ...grpc.CallOption) (*MakeUpdateResponse, error)
 }
 
 type encryNestSecretsServiceClient struct {
@@ -58,9 +58,9 @@ func (c *encryNestSecretsServiceClient) SubscribeUpdates(ctx context.Context, in
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type EncryNestSecretsService_SubscribeUpdatesClient = grpc.ServerStreamingClient[Update]
 
-func (c *encryNestSecretsServiceClient) MakeUpdate(ctx context.Context, in *Update, opts ...grpc.CallOption) (*MakeUpdateRequest, error) {
+func (c *encryNestSecretsServiceClient) MakeUpdate(ctx context.Context, in *Update, opts ...grpc.CallOption) (*MakeUpdateResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(MakeUpdateRequest)
+	out := new(MakeUpdateResponse)
 	err := c.cc.Invoke(ctx, EncryNestSecretsService_MakeUpdate_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func (c *encryNestSecretsServiceClient) MakeUpdate(ctx context.Context, in *Upda
 // for forward compatibility.
 type EncryNestSecretsServiceServer interface {
 	SubscribeUpdates(*SubscribeRequest, grpc.ServerStreamingServer[Update]) error
-	MakeUpdate(context.Context, *Update) (*MakeUpdateRequest, error)
+	MakeUpdate(context.Context, *Update) (*MakeUpdateResponse, error)
 	mustEmbedUnimplementedEncryNestSecretsServiceServer()
 }
 
@@ -87,7 +87,7 @@ type UnimplementedEncryNestSecretsServiceServer struct{}
 func (UnimplementedEncryNestSecretsServiceServer) SubscribeUpdates(*SubscribeRequest, grpc.ServerStreamingServer[Update]) error {
 	return status.Errorf(codes.Unimplemented, "method SubscribeUpdates not implemented")
 }
-func (UnimplementedEncryNestSecretsServiceServer) MakeUpdate(context.Context, *Update) (*MakeUpdateRequest, error) {
+func (UnimplementedEncryNestSecretsServiceServer) MakeUpdate(context.Context, *Update) (*MakeUpdateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MakeUpdate not implemented")
 }
 func (UnimplementedEncryNestSecretsServiceServer) mustEmbedUnimplementedEncryNestSecretsServiceServer() {
