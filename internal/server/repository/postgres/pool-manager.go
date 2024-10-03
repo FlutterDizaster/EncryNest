@@ -2,42 +2,54 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"sync/atomic"
 	"time"
 
+	"github.com/golang-migrate/migrate/v4"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Settings struct {
-	ConnString string
-	RetryCount int
-	RetryDelay time.Duration
+	ConnString          string
+	RetryCount          int
+	RetryDelay          time.Duration
+	MigrationsDirectory string
 }
 
 type PoolManager struct {
-	pool        *pgxpool.Pool
-	config      *pgxpool.Config
-	retryCount  int
-	retryDelay  time.Duration
-	reconecting atomic.Bool
+	pool                *pgxpool.Pool
+	config              *pgxpool.Config
+	retryCount          int
+	retryDelay          time.Duration
+	reconecting         atomic.Bool
+	migrationsDirectory string
 }
 
-func NewConnectionPool(ctx context.Context, settings Settings) (*PoolManager, error) {
+func NewPoolManager(ctx context.Context, settings Settings) (*PoolManager, error) {
 	config, err := pgxpool.ParseConfig(settings.ConnString)
 	if err != nil {
 		return nil, err
 	}
 
 	pool := &PoolManager{
-		config:      config,
-		retryCount:  settings.RetryCount,
-		retryDelay:  settings.RetryDelay,
-		reconecting: atomic.Bool{},
+		config:              config,
+		retryCount:          settings.RetryCount,
+		retryDelay:          settings.RetryDelay,
+		reconecting:         atomic.Bool{},
+		migrationsDirectory: settings.MigrationsDirectory,
+	}
+
+	err = pool.migrate()
+	if err != nil {
+		slog.Error("Error while running migrations", slog.Any("err", err))
+		return nil, err
 	}
 
 	err = pool.Connect(ctx)
 	if err != nil {
+		slog.Error("Error while connecting to DB", slog.Any("err", err))
 		return nil, err
 	}
 
@@ -86,4 +98,28 @@ func (p *PoolManager) Connect(ctx context.Context) error {
 	slog.Error("Error connecting to DB", slog.Any("Error", err))
 
 	return err
+}
+
+func (p *PoolManager) migrate() error {
+	if p.migrationsDirectory == "" {
+		slog.Info("Skipping migrations")
+		return nil
+	}
+
+	slog.Info("Running migrations")
+
+	migrator, err := migrate.New(
+		p.migrationsDirectory,
+		p.pool.Config().ConnString(),
+	)
+	if err != nil {
+		return err
+	}
+
+	err = migrator.Up()
+	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return err
+	}
+
+	return nil
 }

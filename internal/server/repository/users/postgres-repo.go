@@ -19,7 +19,7 @@ type PostgresUserRepository struct {
 
 // var _ usercontroller.UserRepository = &PostgresUserRepository{}
 
-func NewPostgresUserRepository(poolManager *postgres.PoolManager) *PostgresUserRepository {
+func NewPostgresRepository(poolManager *postgres.PoolManager) *PostgresUserRepository {
 	return &PostgresUserRepository{
 		poolManager: poolManager,
 	}

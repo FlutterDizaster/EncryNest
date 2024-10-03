@@ -16,7 +16,7 @@ type PostgresSecretsRepository struct {
 
 // var _ secretscontroller.SecretsRepository = (*PostgresSecretsRepository)(nil)
 
-func NewPostgresSecretsManager(poolManager *postgres.PoolManager) *PostgresSecretsRepository {
+func NewPostgresRepository(poolManager *postgres.PoolManager) *PostgresSecretsRepository {
 	return &PostgresSecretsRepository{
 		poolManager: poolManager,
 	}

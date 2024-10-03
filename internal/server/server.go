@@ -10,6 +10,7 @@ import (
 	secretscontroller "github.com/FlutterDizaster/EncryNest/internal/server/controllers/secrets-controller"
 	usercontroller "github.com/FlutterDizaster/EncryNest/internal/server/controllers/user-controller"
 	jwtresolver "github.com/FlutterDizaster/EncryNest/internal/server/jwt-resolver"
+	"github.com/FlutterDizaster/EncryNest/internal/server/repository/postgres"
 	secretsrepo "github.com/FlutterDizaster/EncryNest/internal/server/repository/secrets"
 	usersrepo "github.com/FlutterDizaster/EncryNest/internal/server/repository/users"
 	"github.com/FlutterDizaster/EncryNest/internal/server/services/interceptors"
@@ -21,26 +22,37 @@ import (
 )
 
 const (
-	TokenTTL = time.Hour * 24 * 31
+	TokenTTL         = time.Hour * 24 * 31
+	DBConnRetryCount = 3
+	DBConnRetryDelay = time.Second
 )
 
 type Settings struct {
-	Addr      string
-	Port      string
-	JWTSecret string
+	Addr                string
+	Port                string
+	JWTSecret           string
+	DatabaseURL         string
+	MigrationsDirectory string
+	CertsDirectory      string
 }
 
 type Server struct {
-	addr      string
-	port      string
-	jwtSecret string
+	addr           string
+	port           string
+	jwtSecret      string
+	databaseURL    string
+	migrationsDir  string
+	certsDirectory string // TODO: add certs logic
 }
 
 func NewServer(settings Settings) *Server {
 	return &Server{
-		addr:      settings.Addr,
-		port:      settings.Port,
-		jwtSecret: settings.JWTSecret,
+		addr:           settings.Addr,
+		port:           settings.Port,
+		jwtSecret:      settings.JWTSecret,
+		databaseURL:    settings.DatabaseURL,
+		migrationsDir:  settings.MigrationsDirectory,
+		certsDirectory: settings.CertsDirectory,
 	}
 }
 
@@ -55,8 +67,29 @@ func (s *Server) Run(ctx context.Context) error {
 	jwtResolver := jwtresolver.New(jwtResolverSettings)
 
 	// Setup repositories
-	userRepo := usersrepo.NewInMemoryRepository()
-	secretsRepo := secretsrepo.NewInMemoryRepository()
+	var userRepo usercontroller.UserRepository
+	var secretsRepo secretscontroller.SecretsRepository
+
+	if s.databaseURL == "" {
+		userRepo = usersrepo.NewInMemoryRepository()
+		secretsRepo = secretsrepo.NewInMemoryRepository()
+	} else {
+		// Setup database
+		poolManager, err := postgres.NewPoolManager(ctx, postgres.Settings{
+			ConnString:          s.databaseURL,
+			RetryCount:          DBConnRetryCount,
+			RetryDelay:          DBConnRetryDelay,
+			MigrationsDirectory: s.migrationsDir,
+		})
+
+		if err != nil {
+			slog.Error("Error creating pool manager", slog.Any("err", err))
+			return err
+		}
+
+		userRepo = usersrepo.NewPostgresRepository(poolManager)
+		secretsRepo = secretsrepo.NewPostgresRepository(poolManager)
+	}
 
 	// Setup controllers
 	userController := usercontroller.NewUserController(userRepo, jwtResolver)
