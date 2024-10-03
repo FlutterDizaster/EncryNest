@@ -1,11 +1,10 @@
-package userrepo
+package usersrepo
 
 import (
 	"context"
 	"errors"
 
 	"github.com/FlutterDizaster/EncryNest/internal/models"
-	usercontroller "github.com/FlutterDizaster/EncryNest/internal/server/controllers/user-controller"
 	"github.com/FlutterDizaster/EncryNest/internal/server/repository/postgres"
 	sharederrors "github.com/FlutterDizaster/EncryNest/internal/shared-errors"
 	"github.com/google/uuid"
@@ -18,7 +17,7 @@ type PostgresUserRepository struct {
 	poolManager *postgres.PoolManager
 }
 
-var _ usercontroller.UserRepository = &PostgresUserRepository{}
+// var _ usercontroller.UserRepository = &PostgresUserRepository{}
 
 func NewPostgresUserRepository(poolManager *postgres.PoolManager) *PostgresUserRepository {
 	return &PostgresUserRepository{

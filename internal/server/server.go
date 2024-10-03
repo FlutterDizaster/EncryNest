@@ -7,16 +7,15 @@ import (
 	"time"
 
 	pb "github.com/FlutterDizaster/EncryNest/api/generated"
-	"golang.org/x/sync/errgroup"
-
 	secretscontroller "github.com/FlutterDizaster/EncryNest/internal/server/controllers/secrets-controller"
 	usercontroller "github.com/FlutterDizaster/EncryNest/internal/server/controllers/user-controller"
 	jwtresolver "github.com/FlutterDizaster/EncryNest/internal/server/jwt-resolver"
-	secretsrepo "github.com/FlutterDizaster/EncryNest/internal/server/repository/secrets-repo"
-	userrepo "github.com/FlutterDizaster/EncryNest/internal/server/repository/user-repo/memory"
-	interceptors "github.com/FlutterDizaster/EncryNest/internal/server/services/interceptors"
-	secretsservice "github.com/FlutterDizaster/EncryNest/internal/server/services/secrets-service"
-	userservice "github.com/FlutterDizaster/EncryNest/internal/server/services/user-service"
+	secretsrepo "github.com/FlutterDizaster/EncryNest/internal/server/repository/secrets"
+	usersrepo "github.com/FlutterDizaster/EncryNest/internal/server/repository/users"
+	"github.com/FlutterDizaster/EncryNest/internal/server/services/interceptors"
+	secretsservice "github.com/FlutterDizaster/EncryNest/internal/server/services/secrets"
+	userservice "github.com/FlutterDizaster/EncryNest/internal/server/services/users"
+	"golang.org/x/sync/errgroup"
 
 	"google.golang.org/grpc"
 )
@@ -56,7 +55,7 @@ func (s *Server) Run(ctx context.Context) error {
 	jwtResolver := jwtresolver.New(jwtResolverSettings)
 
 	// Setup repositories
-	userRepo := userrepo.NewInMemoryRepository()
+	userRepo := usersrepo.NewInMemoryRepository()
 	secretsRepo := secretsrepo.NewInMemoryRepository()
 
 	// Setup controllers
