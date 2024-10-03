@@ -72,17 +72,11 @@ func (s *UserService) RegisterUser(
 	token, err := s.userController.RegisterUser(ctx, user)
 
 	if err != nil {
-		if errors.Is(err, sharederrors.ErrEmailTaken) {
+		if errors.Is(err, sharederrors.ErrUserAlredyExists) {
 			return nil, status.Errorf(
 				codes.AlreadyExists,
-				"user with %s email is already registered",
+				"user with %s email or %s username is already registered",
 				req.GetEmail(),
-			)
-		}
-		if errors.Is(err, sharederrors.ErrUsernameTaken) {
-			return nil, status.Errorf(
-				codes.AlreadyExists,
-				"user with %s username is already registered",
 				req.GetUsername(),
 			)
 		}

@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/FlutterDizaster/EncryNest/internal/models"
-	usercontroller "github.com/FlutterDizaster/EncryNest/internal/server/controllers/user-controller"
 	sharederrors "github.com/FlutterDizaster/EncryNest/internal/shared-errors"
 	"github.com/google/uuid"
 )
@@ -19,7 +18,7 @@ type InMemoryRepository struct {
 	users sync.Map
 }
 
-var _ usercontroller.UserRepository = &InMemoryRepository{}
+// var _ usercontroller.UserRepository = &InMemoryRepository{}
 
 func NewInMemoryRepository() *InMemoryRepository {
 	return &InMemoryRepository{}
@@ -52,12 +51,12 @@ func (r *InMemoryRepository) addUser(
 		}
 
 		if u.Email == user.Email {
-			err = sharederrors.ErrEmailTaken
+			err = sharederrors.ErrUserAlredyExists
 			return false
 		}
 
 		if u.Username == user.Username {
-			err = sharederrors.ErrUsernameTaken
+			err = sharederrors.ErrUserAlredyExists
 			return false
 		}
 		return true
