@@ -7,7 +7,7 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/FlutterDizaster/EncryNest/internal/models/secrets"
+	"github.com/FlutterDizaster/EncryNest/internal/models"
 	updatemanager "github.com/FlutterDizaster/EncryNest/internal/server/controllers/secrets-controller/update-manager"
 	"github.com/google/uuid"
 )
@@ -18,12 +18,12 @@ type SecretsRepository interface {
 	AddSecret(
 		ctx context.Context,
 		userID uuid.UUID,
-		secret *secrets.Secret,
+		secret *models.Secret,
 	) (uuid.UUID, string, error)
 
 	// UpdateSecret updates secret with specified ID.
 	// Returns new secret version.
-	UpdateSecret(ctx context.Context, userID uuid.UUID, secret *secrets.Secret) (string, error)
+	UpdateSecret(ctx context.Context, userID uuid.UUID, secret *models.Secret) (string, error)
 
 	// RemoveSecret removes secret with specified ID.
 	// Returns secret version.
@@ -34,7 +34,7 @@ type SecretsRepository interface {
 		ctx context.Context,
 		userID uuid.UUID,
 		knownVersion string,
-	) ([]secrets.Secret, error)
+	) ([]models.Secret, error)
 
 	// DeleteUnknownSecretsBeforeVersion deletes secrets before specified version
 	// and returns IDs of deleted secrets.
@@ -69,7 +69,7 @@ func NewSecretsController(repo SecretsRepository) *SecretsController {
 // Returns new secret ID and secret version.
 func (c *SecretsController) MakeUpdate(
 	ctx context.Context,
-	update *secrets.Update,
+	update *models.Update,
 ) (string, uuid.UUID, error) {
 	var version string
 	newID := uuid.Nil
@@ -77,20 +77,20 @@ func (c *SecretsController) MakeUpdate(
 
 	// Make right action with secrets repo
 	switch update.Action {
-	case secrets.UpdateActionCreate:
+	case models.UpdateActionCreate:
 		newID, version, err = c.repo.AddSecret(ctx, update.UserID, update.Secret)
 		if err != nil {
 			return "", uuid.Nil, err
 		}
 
-	case secrets.UpdateActionUpdate:
+	case models.UpdateActionUpdate:
 		version, err = c.repo.UpdateSecret(ctx, update.UserID, update.Secret)
 		newID = update.Secret.ID
 		if err != nil {
 			return "", uuid.Nil, err
 		}
 
-	case secrets.UpdateActionDelete:
+	case models.UpdateActionDelete:
 		version, err = c.repo.RemoveSecret(ctx, update.UserID, update.Secret.ID)
 		if err != nil {
 			return "", uuid.Nil, err
@@ -146,14 +146,14 @@ func (c *SecretsController) syncSecrets(
 
 	// Send updates to client
 	for i := range newSecrets {
-		upd := secrets.Update{
+		upd := models.Update{
 			Secret: &newSecrets[i],
 		}
 		// If knownIDs contains newSecrets[i].ID, action update, else create
 		if slices.Contains(knownIDs, newSecrets[i].ID.String()) {
-			upd.Action = secrets.UpdateActionUpdate
+			upd.Action = models.UpdateActionUpdate
 		} else {
-			upd.Action = secrets.UpdateActionCreate
+			upd.Action = models.UpdateActionCreate
 		}
 		// Send update to update manager
 		err = c.updateManager.SendUpdateTo(userID, clientID, upd)
@@ -210,9 +210,9 @@ func (c *SecretsController) deleteUnknownSecrets(
 	// Send deleted secrets to update manager
 	for i := range deletedSecrets {
 		// Make update instance
-		upd := secrets.Update{
-			Action: secrets.UpdateActionDelete,
-			Secret: &secrets.Secret{
+		upd := models.Update{
+			Action: models.UpdateActionDelete,
+			Secret: &models.Secret{
 				ID: deletedSecrets[i],
 			},
 		}
@@ -242,7 +242,7 @@ func (c *SecretsController) SubscribeUpdates(
 	clientID uuid.UUID,
 	knownVersion string,
 	knownIDs []string,
-) <-chan secrets.Update {
+) <-chan models.Update {
 	// Subscribe for updates
 	updateCh, err := c.updateManager.SubscribeClient(userID, clientID)
 	if err != nil {

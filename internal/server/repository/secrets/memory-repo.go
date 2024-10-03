@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/FlutterDizaster/EncryNest/internal/models/secrets"
+	"github.com/FlutterDizaster/EncryNest/internal/models"
 	"github.com/google/uuid"
 )
 
@@ -24,7 +24,7 @@ func NewInMemoryRepository() *SecretsRepo {
 func (r *SecretsRepo) AddSecret(
 	_ context.Context,
 	userID uuid.UUID,
-	secret *secrets.Secret,
+	secret *models.Secret,
 ) (uuid.UUID, string, error) {
 	secretsList, ok := r.userSecrets.Load(userID)
 	if !ok {
@@ -38,7 +38,7 @@ func (r *SecretsRepo) AddSecret(
 func (r *SecretsRepo) UpdateSecret(
 	_ context.Context,
 	userID uuid.UUID,
-	secret *secrets.Secret,
+	secret *models.Secret,
 ) (string, error) {
 	secretsList, ok := r.userSecrets.Load(userID)
 	if !ok {
@@ -67,7 +67,7 @@ func (r *SecretsRepo) GetSecretsAboveVersion(
 	_ context.Context,
 	userID uuid.UUID,
 	knownVersion string,
-) ([]secrets.Secret, error) {
+) ([]models.Secret, error) {
 	secretsList, ok := r.userSecrets.Load(userID)
 	if !ok {
 		secretsList = &SecretsList{}

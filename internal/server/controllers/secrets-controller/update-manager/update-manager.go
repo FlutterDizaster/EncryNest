@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"sync"
 
-	"github.com/FlutterDizaster/EncryNest/internal/models/secrets"
+	"github.com/FlutterDizaster/EncryNest/internal/models"
 	"github.com/google/uuid"
 )
 
@@ -13,7 +13,7 @@ type UpdateManager struct {
 	updatesList sync.Map
 }
 
-func (m *UpdateManager) SubscribeClient(userID, clientID uuid.UUID) (<-chan secrets.Update, error) {
+func (m *UpdateManager) SubscribeClient(userID, clientID uuid.UUID) (<-chan models.Update, error) {
 	// Try to get userUpdater from map
 	updater, ok := m.updatesList.Load(userID)
 	if !ok {
@@ -59,7 +59,7 @@ func (m *UpdateManager) UnsubscribeClient(userID, clientID uuid.UUID) error {
 	return uUpdater.UnsubscribeClient(clientID)
 }
 
-func (m *UpdateManager) SendUpdateFrom(userID, clientID uuid.UUID, update secrets.Update) error {
+func (m *UpdateManager) SendUpdateFrom(userID, clientID uuid.UUID, update models.Update) error {
 	// Try to get userUpdater from map
 	updater, ok := m.updatesList.Load(userID)
 	if !ok {
@@ -83,7 +83,7 @@ func (m *UpdateManager) SendUpdateFrom(userID, clientID uuid.UUID, update secret
 	return nil
 }
 
-func (m *UpdateManager) SendUpdateTo(userID, clientID uuid.UUID, update secrets.Update) error {
+func (m *UpdateManager) SendUpdateTo(userID, clientID uuid.UUID, update models.Update) error {
 	// Try to get userUpdater from map
 	updater, ok := m.updatesList.Load(userID)
 	if !ok {

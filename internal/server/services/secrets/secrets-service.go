@@ -4,8 +4,8 @@ import (
 	"context"
 
 	pb "github.com/FlutterDizaster/EncryNest/api/generated"
+	"github.com/FlutterDizaster/EncryNest/internal/models"
 	ctxvalues "github.com/FlutterDizaster/EncryNest/internal/models/ctx-values"
-	"github.com/FlutterDizaster/EncryNest/internal/models/secrets"
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -17,7 +17,7 @@ type SecretsController interface {
 	// MakeUpdate used to create new secret in the system.
 	// Return new version string and secret ID.
 	// Or error.
-	MakeUpdate(ctx context.Context, update *secrets.Update) (string, uuid.UUID, error)
+	MakeUpdate(ctx context.Context, update *models.Update) (string, uuid.UUID, error)
 
 	// SubscribeUpdates subscribes for secret updates.
 	// Return channel of secret updates.
@@ -27,7 +27,7 @@ type SecretsController interface {
 		clientID uuid.UUID,
 		knownVersion string,
 		knownIDs []string,
-	) <-chan secrets.Update
+	) <-chan models.Update
 }
 
 // SecretsService represents secrets service.
@@ -55,7 +55,7 @@ func (s *SecretsService) MakeUpdate(
 	resp := &pb.MakeUpdateResponse{}
 
 	// Converting pb secret to secret model
-	secret, err := secrets.NewSecretFromProto(req.GetSecret())
+	secret, err := models.NewSecretFromProto(req.GetSecret())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "invalid secret ID")
 	}
@@ -72,7 +72,7 @@ func (s *SecretsService) MakeUpdate(
 		return nil, status.Errorf(codes.Internal, "can't get client ID")
 	}
 
-	upd := &secrets.Update{
+	upd := &models.Update{
 		UserID:   userID,
 		ClientID: clientID,
 		Secret:   secret,
@@ -125,13 +125,13 @@ func (s *SecretsService) SubscribeUpdates(
 		resp.Secret = update.Secret.ToProto()
 
 		switch update.Action {
-		case secrets.UpdateActionCreate:
+		case models.UpdateActionCreate:
 			resp.Action = pb.Action_CREATE
 
-		case secrets.UpdateActionUpdate:
+		case models.UpdateActionUpdate:
 			resp.Action = pb.Action_UPDATE
 
-		case secrets.UpdateActionDelete:
+		case models.UpdateActionDelete:
 			resp.Action = pb.Action_DELETE
 
 		default:

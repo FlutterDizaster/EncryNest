@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"sync"
 
-	"github.com/FlutterDizaster/EncryNest/internal/models/secrets"
+	"github.com/FlutterDizaster/EncryNest/internal/models"
 	"github.com/google/uuid"
 )
 
@@ -13,7 +13,7 @@ type userUpdater struct {
 	clients sync.Map
 }
 
-func (u *userUpdater) SubscribeClient(clientID uuid.UUID) (<-chan secrets.Update, error) {
+func (u *userUpdater) SubscribeClient(clientID uuid.UUID) (<-chan models.Update, error) {
 	// Try to get client from map
 	ch, ok := u.clients.Load(clientID)
 	if ok && ch != nil {
@@ -21,7 +21,7 @@ func (u *userUpdater) SubscribeClient(clientID uuid.UUID) (<-chan secrets.Update
 	}
 
 	// Create new updates Channel with capacity 1
-	updatesChan := make(chan secrets.Update, 1)
+	updatesChan := make(chan models.Update, 1)
 
 	// Register client
 	u.clients.Store(clientID, updatesChan)
@@ -37,7 +37,7 @@ func (u *userUpdater) UnsubscribeClient(clientID uuid.UUID) error {
 	}
 
 	// Type assertion
-	updatesChan, ok := ch.(chan secrets.Update)
+	updatesChan, ok := ch.(chan models.Update)
 	if !ok {
 		slog.Error(
 			"Type assertion error",
@@ -54,7 +54,7 @@ func (u *userUpdater) UnsubscribeClient(clientID uuid.UUID) error {
 	return nil
 }
 
-func (u *userUpdater) SendUpdateFrom(clientID uuid.UUID, update secrets.Update) {
+func (u *userUpdater) SendUpdateFrom(clientID uuid.UUID, update models.Update) {
 	u.clients.Range(func(key, value any) bool {
 		// Skip current client
 		if key.(uuid.UUID) == clientID {
@@ -62,7 +62,7 @@ func (u *userUpdater) SendUpdateFrom(clientID uuid.UUID, update secrets.Update) 
 		}
 
 		// Type assertion
-		updatesChan, ok := value.(chan secrets.Update)
+		updatesChan, ok := value.(chan models.Update)
 		if !ok {
 			slog.Error(
 				"Type assertion error",
@@ -78,7 +78,7 @@ func (u *userUpdater) SendUpdateFrom(clientID uuid.UUID, update secrets.Update) 
 	})
 }
 
-func (u *userUpdater) SendUpdateTo(clientID uuid.UUID, update secrets.Update) {
+func (u *userUpdater) SendUpdateTo(clientID uuid.UUID, update models.Update) {
 	value, ok := u.clients.Load(clientID)
 
 	if !ok || value == nil {
@@ -86,7 +86,7 @@ func (u *userUpdater) SendUpdateTo(clientID uuid.UUID, update secrets.Update) {
 	}
 
 	// Type assertion
-	updatesChan, ok := value.(chan secrets.Update)
+	updatesChan, ok := value.(chan models.Update)
 	if !ok {
 		slog.Error(
 			"Type assertion error",
