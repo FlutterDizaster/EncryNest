@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net"
 	"time"
@@ -16,9 +17,11 @@ import (
 	"github.com/FlutterDizaster/EncryNest/internal/server/services/interceptors"
 	secretsservice "github.com/FlutterDizaster/EncryNest/internal/server/services/secrets"
 	userservice "github.com/FlutterDizaster/EncryNest/internal/server/services/users"
+	"github.com/FlutterDizaster/EncryNest/pkg/keychain"
 	"golang.org/x/sync/errgroup"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 const (
@@ -34,6 +37,8 @@ type Settings struct {
 	DatabaseURL         string `desc:"Database URL"    env:"DATABASE_URL"   name:"db-url"     short:"d"`
 	MigrationsDirectory string `desc:"Migrations dir"  env:"MIGRATIONS_DIR" name:"migrations" short:"m"`
 	CertsDirectory      string `desc:"Certs directory" env:"CERTS_DIR"      name:"certs-dir"  short:"e"`
+	CertFileName        string `desc:"Cert file name"  env:"CERT_FILE_NAME" name:"cert-file"  short:"c" default:"cert.pem"`
+	KeyFileName         string `desc:"Key file name"   env:"KEY_FILE_NAME"  name:"key-file"   short:"k" default:"key.pem"`
 }
 
 type Server struct {
@@ -42,7 +47,10 @@ type Server struct {
 	jwtSecret      string
 	databaseURL    string
 	migrationsDir  string
-	certsDirectory string // TODO: add certs logic
+	certsDirectory string
+	certFileName   string
+	keyFileName    string
+	srv            *grpc.Server
 }
 
 func NewServer(settings Settings) *Server {
@@ -53,10 +61,12 @@ func NewServer(settings Settings) *Server {
 		databaseURL:    settings.DatabaseURL,
 		migrationsDir:  settings.MigrationsDirectory,
 		certsDirectory: settings.CertsDirectory,
+		certFileName:   settings.CertFileName,
+		keyFileName:    settings.KeyFileName,
 	}
 }
 
-func (s *Server) Run(ctx context.Context) error {
+func (s *Server) Init(ctx context.Context) error {
 	slog.Info("Starting server")
 
 	// Setup JWT resolver
@@ -114,24 +124,54 @@ func (s *Server) Run(ctx context.Context) error {
 	streamInterceptors = append(streamInterceptors, auth.Stream())
 	streamInterceptors = append(streamInterceptors, logger.Stream())
 
+	// Setup server options
+	serverOptions := make([]grpc.ServerOption, 0)
+	serverOptions = append(serverOptions, grpc.ChainUnaryInterceptor(unaryInterceptors...))
+	serverOptions = append(serverOptions, grpc.ChainStreamInterceptor(streamInterceptors...))
+
+	// Setup TLS config
+	if s.certsDirectory != "" || (s.certFileName != "" && s.keyFileName != "") {
+		tlsLoadingSettings := keychain.TLSCertificateSettings{
+			Directory: s.certsDirectory,
+			CertFile:  s.certFileName,
+			KeyFile:   s.keyFileName,
+		}
+
+		cert, err := keychain.LoadTLSCertificate(tlsLoadingSettings)
+		if err != nil {
+			return err
+		}
+
+		cred := credentials.NewServerTLSFromCert(cert)
+		serverOptions = append(serverOptions, grpc.Creds(cred))
+		slog.Info("TLS is enabled")
+	} else {
+		slog.Info("TLS is disabled")
+	}
+
 	// Setup gRPC server
-	encryNestServer := grpc.NewServer(
-		grpc.ChainUnaryInterceptor(unaryInterceptors...),
-		grpc.ChainStreamInterceptor(streamInterceptors...),
-	)
+	s.srv = grpc.NewServer(serverOptions...)
 
 	// Register services
 	pb.RegisterEncryNestUserServiceServer(
-		encryNestServer,
+		s.srv,
 		userservice.NewUserService(userController),
 	)
 	pb.RegisterEncryNestSecretsServiceServer(
-		encryNestServer,
+		s.srv,
 		secretsservice.NewSecretsService(secretsController),
 	)
 	// TODO: Add file service
 	// TODO: Add keys service
 
+	return nil
+}
+
+func (s *Server) Run(ctx context.Context) error {
+	if s.srv == nil {
+		slog.Error("Server is not initialized")
+		return errors.New("server is not initialized")
+	}
 	// Setup listener
 	listenConfig := net.ListenConfig{
 		KeepAlive: -1,
@@ -145,7 +185,7 @@ func (s *Server) Run(ctx context.Context) error {
 
 	// Start gRPC server
 	eg.Go(func() error {
-		return encryNestServer.Serve(listener)
+		return s.srv.Serve(listener)
 	})
 
 	slog.Info("Server started", slog.String("addr", s.addr+":"+s.port))
@@ -154,7 +194,7 @@ func (s *Server) Run(ctx context.Context) error {
 	eg.Go(func() error {
 		<-ctx.Done()
 		slog.Info("Shutting down server")
-		encryNestServer.GracefulStop()
+		s.srv.GracefulStop()
 		return nil
 	})
 
