@@ -2,20 +2,20 @@ package secrets
 
 // import "github.com/google/uuid"
 
-// type Memo struct {
+// type FileInfo struct {
 // 	ID          uuid.UUID `json:"id"`
 // 	Name        string    `json:"name"`
-// 	Data        string    `json:"data"`
+// 	Size        int64     `json:"size"`
 // 	Description string    `json:"description,omitempty"`
 // }
 
-// func (m Memo) ConvertToSecret() (*Secret, error) {
+// func (f FileInfo) ConvertToSecret() (*Secret, error) {
 // 	s := &Secret{
-// 		ID:   m.ID,
-// 		Kind: SecretKindMemo,
+// 		ID:   f.ID,
+// 		Kind: SecretKindFileInfo,
 // 	}
 
-// 	data, err := parseFromExactType(m)
+// 	data, err := parseFromExactType(f)
 // 	if err != nil {
 // 		return nil, err
 // 	}
