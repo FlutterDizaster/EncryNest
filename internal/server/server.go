@@ -148,9 +148,12 @@ func (s *Server) Run(ctx context.Context) error {
 		return encryNestServer.Serve(listener)
 	})
 
+	slog.Info("Server started", slog.String("addr", s.addr+":"+s.port))
+
 	// Wait for context to be done
 	eg.Go(func() error {
 		<-ctx.Done()
+		slog.Info("Shutting down server")
 		encryNestServer.GracefulStop()
 		return nil
 	})

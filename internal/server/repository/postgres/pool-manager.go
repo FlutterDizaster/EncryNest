@@ -9,6 +9,11 @@ import (
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	//nolint:revieve // This is for migrate
+	_ "github.com/golang-migrate/migrate/v4/database/pgx/v5"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+	_ "github.com/jackc/pgx/v5"
 )
 
 type Settings struct {
@@ -21,6 +26,7 @@ type Settings struct {
 type PoolManager struct {
 	pool                *pgxpool.Pool
 	config              *pgxpool.Config
+	connString          string
 	retryCount          int
 	retryDelay          time.Duration
 	reconecting         atomic.Bool
@@ -36,14 +42,15 @@ func NewPoolManager(ctx context.Context, settings Settings) (*PoolManager, error
 	pool := &PoolManager{
 		config:              config,
 		retryCount:          settings.RetryCount,
+		connString:          settings.ConnString,
 		retryDelay:          settings.RetryDelay,
 		reconecting:         atomic.Bool{},
 		migrationsDirectory: settings.MigrationsDirectory,
 	}
 
-	err = pool.migrate()
+	err = pool.migrate(ctx)
 	if err != nil {
-		slog.Error("Error while running migrations", slog.Any("err", err))
+		slog.Error("Error migrations", slog.Any("err", err))
 		return nil, err
 	}
 
@@ -84,12 +91,13 @@ func (p *PoolManager) Connect(ctx context.Context) error {
 	for i := range p.retryCount {
 		slog.Info(
 			"Attempting connect to the DB",
-			slog.Int("Attempt", i),
+			slog.Int("Attempt", i+1),
 			slog.Int("Max attempts", p.retryCount),
 		)
 		pool, err = pgxpool.NewWithConfig(ctx, p.config)
 		if err == nil {
 			p.pool = pool
+			slog.Info("Connected to the DB")
 			return nil
 		}
 		time.Sleep(p.retryDelay)
@@ -100,7 +108,7 @@ func (p *PoolManager) Connect(ctx context.Context) error {
 	return err
 }
 
-func (p *PoolManager) migrate() error {
+func (p *PoolManager) migrate(ctx context.Context) error {
 	if p.migrationsDirectory == "" {
 		slog.Info("Skipping migrations")
 		return nil
@@ -109,17 +117,33 @@ func (p *PoolManager) migrate() error {
 	slog.Info("Running migrations")
 
 	migrator, err := migrate.New(
-		p.migrationsDirectory,
-		p.pool.Config().ConnString(),
+		"file://"+p.migrationsDirectory,
+		p.connString,
 	)
 	if err != nil {
+		slog.Error("Error while creating migrator", slog.Any("err", err))
 		return err
+	}
+	defer migrator.Close()
+
+	errCh := make(chan error)
+
+	go func() {
+		errCh <- migrator.Up()
+	}()
+
+	select {
+	case err = <-errCh:
+		if err != nil && !errors.Is(err, migrate.ErrNoChange) {
+			slog.Error("Error while running migrations", slog.Any("err", err))
+			return err
+		}
+	case <-ctx.Done():
+		migrator.GracefulStop <- true
+		return ctx.Err()
 	}
 
-	err = migrator.Up()
-	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		return err
-	}
+	slog.Info("Migrations finished")
 
 	return nil
 }
