@@ -24,6 +24,7 @@ require (
 	github.com/golang-migrate/migrate/v4 v4.18.1
 	github.com/jackc/pgx/v5 v5.7.1
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/spf13/pflag v1.0.5
 	golang.org/x/net v0.29.0 // indirect
 	golang.org/x/sync v0.8.0
 	golang.org/x/sys v0.25.0 // indirect

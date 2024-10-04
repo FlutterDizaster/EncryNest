@@ -28,12 +28,12 @@ const (
 )
 
 type Settings struct {
-	Addr                string
-	Port                string
-	JWTSecret           string
-	DatabaseURL         string
-	MigrationsDirectory string
-	CertsDirectory      string
+	Addr                string `desc:"Server address"  env:"SERVER_ADDR"    name:"addr"       short:"a"`
+	Port                string `desc:"Server port"     env:"SERVER_PORT"    name:"port"       short:"p" default:"50555"`
+	JWTSecret           string `desc:"JWT secret"      env:"JWT_SECRET"     name:"jwt-secret" short:"s"`
+	DatabaseURL         string `desc:"Database URL"    env:"DATABASE_URL"   name:"db-url"     short:"d"`
+	MigrationsDirectory string `desc:"Migrations dir"  env:"MIGRATIONS_DIR" name:"migrations" short:"m"`
+	CertsDirectory      string `desc:"Certs directory" env:"CERTS_DIR"      name:"certs-dir"  short:"e"`
 }
 
 type Server struct {
