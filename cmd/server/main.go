@@ -32,6 +32,12 @@ func main() {
 
 	srv := server.NewServer(settings)
 
+	err = srv.Init(ctx)
+	if err != nil {
+		slog.Error("Error while initializing server", slog.Any("err", err))
+		return
+	}
+
 	err = srv.Run(ctx)
 	if err != nil {
 		slog.Error("Error while running server", slog.Any("err", err))
